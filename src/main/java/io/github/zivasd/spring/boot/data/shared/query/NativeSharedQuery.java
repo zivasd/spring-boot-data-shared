@@ -30,12 +30,8 @@ import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.repository.query.Parameter;
 
 /**
- * for isCollectionQuery
- * isStreamQuery isSliceQuery isPageQuery isModifyingQuery ... not support
- * @ClassName: SimpleSharedQuery
- * @Description: 简单的分表查询
- * @author 张宗保
- * @date 2024-10-23 12:34:03
+ * for isCollectionQuery isPageQuery
+ * isStreamQuery isSliceQuery isModifyingQuery ... not support
  */
 public class NativeSharedQuery extends AbstractSharedQuery {
 	private static final Logger logger = LoggerFactory.getLogger(NativeSharedQuery.class);
