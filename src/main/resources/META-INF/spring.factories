@@ -1,1 +1,2 @@
 org.springframework.data.repository.core.support.RepositoryFactorySupport=io.github.zivasd.spring.boot.data.shared.repository.support.SharedRepositoryFactory
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=io.github.zivasd.spring.boot.data.shared.repository.config.ModuleConfiguration

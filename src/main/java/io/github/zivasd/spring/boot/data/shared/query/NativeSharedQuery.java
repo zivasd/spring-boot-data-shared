@@ -5,7 +5,6 @@ import static java.util.regex.Pattern.DOTALL;
 import static java.util.regex.Pattern.compile;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +16,6 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.persistence.Tuple;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.ConfigurableConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
@@ -29,12 +26,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.repository.query.Parameter;
 
+import io.github.zivasd.spring.boot.data.shared.repository.TableNameDecider;
+import io.github.zivasd.spring.boot.data.shared.repository.config.ModuleConfiguration;
+
 /**
  * for isCollectionQuery isPageQuery
  * isStreamQuery isSliceQuery isModifyingQuery ... not support
  */
 public class NativeSharedQuery extends AbstractSharedQuery {
-	private static final Logger logger = LoggerFactory.getLogger(NativeSharedQuery.class);
 	private static final Pattern COUNT_MATCH = compile("\\s*(select\\s+(((?s).+?)?)\\s+)(from\\s+)(.*)", CASE_INSENSITIVE | DOTALL);
 	private static final ConversionService CONVERSION_SERVICE;
 
@@ -49,6 +48,13 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 		super(method, entityManager);
 	}
 
+	private TableNameDecider getTableNameDecider(Class<? extends TableNameDecider> clazz) {
+		if (clazz == TableNameDecider.NoOperator.class) {
+			return TableNameDecider.NoOperator.INSTANCE;
+		}
+		return ModuleConfiguration.autowire(clazz);
+	}
+	
 	@Override
 	protected Object doExceute(SharedParametersParameterAccessor accessor) {
 		Map<String, Object> bindableParameters = new HashMap<>();
@@ -57,13 +63,7 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 		}
 		
 		final SharedQueryMethod queryMethod = getQueryMethod();
-		List<String> tableNames = Collections.emptyList();
-		try {
-			tableNames = queryMethod.getTableNameDecider().newInstance().decideNames(bindableParameters);
-		} catch (InstantiationException | IllegalAccessException e) {
-			logger.error("Cant create instance of {}",queryMethod.getTableNameDecider().getName(), e);
-			return null;
-		}
+		List<String> tableNames = getTableNameDecider(queryMethod.getTableNameDecider()).decideNames(bindableParameters);
 
 		String queryString = deriveQuery(queryMethod, tableNames);
 		final EntityManager em = getEntityManager();
