@@ -5,6 +5,7 @@ import javax.persistence.PersistenceContext;
 
 import org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 import io.github.zivasd.spring.boot.data.shared.repository.SharedRepository;
@@ -21,6 +22,7 @@ public class SharedRepositoryFactoryBean<T extends SharedRepository> extends Rep
 	}
 
 	@Override
+	@NonNull
 	protected RepositoryFactorySupport createRepositoryFactory() {
 		return new SharedRepositoryFactory(entityManager);
 	}
