@@ -5,6 +5,7 @@ import static java.util.regex.Pattern.DOTALL;
 import static java.util.regex.Pattern.compile;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.repository.query.Parameter;
+import org.springframework.util.StringUtils;
 
 import io.github.zivasd.spring.boot.data.shared.repository.TableNameDecider;
 import io.github.zivasd.spring.boot.data.shared.repository.config.ModuleConfiguration;
@@ -35,6 +37,7 @@ import io.github.zivasd.spring.boot.data.shared.repository.config.ModuleConfigur
  */
 public class NativeSharedQuery extends AbstractSharedQuery {
 	private static final Pattern COUNT_MATCH = compile("\\s*(select\\s+(((?s).+?)?)\\s+)(from\\s+)(.*)", CASE_INSENSITIVE | DOTALL);
+	private static final String TABLE_NAME_PLACEHOLDER = "$TABLE$";
 	private static final ConversionService CONVERSION_SERVICE;
 
 	static {
@@ -64,8 +67,11 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 		
 		final SharedQueryMethod queryMethod = getQueryMethod();
 		List<String> tableNames = getTableNameDecider(queryMethod.getTableNameDecider()).decideNames(bindableParameters);
-
 		String queryString = deriveQuery(queryMethod, tableNames);
+		if (tableNames.isEmpty() && queryString.contains(TABLE_NAME_PLACEHOLDER)) {
+			return Collections.emptyList();
+		}
+
 		final EntityManager em = getEntityManager();
 		Query query = em.createNativeQuery(queryString+" "+deriveSort(accessor.getSort()), Tuple.class);
 		bindableParameters.forEach(query::setParameter);
@@ -124,10 +130,10 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 	
 	private String deriveQuery(SharedQueryMethod queryMethod, List<String> tableNames) {
 		String queryString = queryMethod.getAnnotatedQuery();
-		if (queryString == null) {
+		if (!StringUtils.hasText(queryString)) {
 			throw new InvalidDataAccessApiUsageException("The annotation SharedQuery must set query value.");
 		}
-		return tableNames.isEmpty() ? queryString : tableNames.stream().map(e -> queryString.replace("$TABLE$", e))
+		return tableNames.isEmpty() ? queryString : tableNames.stream().map(e -> queryString.replace(TABLE_NAME_PLACEHOLDER, e))
 				.reduce((result, element) -> result + " UNION ALL " + element).orElse(null);
 	}
 }
