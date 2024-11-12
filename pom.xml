@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>io.github.zivasd</groupId>
 	<artifactId>spring-boot-data-shared</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<name>Spring Boot Simple JPA Shared Query</name>
 	<description>Provide simple shared query for Springboot JPA</description>
 	<url>https://github.com/zivasd/spring-boot-data-shared</url>
 	<properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<springboot.version>2.7.18</springboot.version>
 	</properties>
 	<dependencies>
@@ -24,27 +25,27 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
-			<version>${springboot.version}</version>			
+			<version>${springboot.version}</version>
 			<scope>test</scope>
-		</dependency>		
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
 			<version>${springboot.version}</version>
-			<scope>provided</scope>			
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>io.github.zivasd</groupId>
 			<artifactId>spring-boot-multi-jdbc</artifactId>
 			<version>1.0.5</version>
 			<scope>test</scope>
-		</dependency>		
+		</dependency>
 		<dependency>
 			<groupId>io.github.zivasd</groupId>
 			<artifactId>spring-boot-multi-jpa</artifactId>
-			<version>1.0.3</version>
+			<version>1.0.4</version>
 			<scope>test</scope>
-		</dependency>		
+		</dependency>
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
@@ -53,14 +54,14 @@
 	</dependencies>
 
 	<dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-                <version>2.2.224</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>com.h2database</groupId>
+				<artifactId>h2</artifactId>
+				<version>2.2.224</version>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<issueManagement>
 		<system>Github Issue</system>
@@ -117,26 +118,26 @@
 					</archive>
 				</configuration>
 			</plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.6.3</version>
-                <executions>
-                    <execution>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.6.3</version>
+				<executions>
+					<execution>
 						<id>attach-javadocs</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <encoding>UTF-8</encoding>
+						<phase>package</phase>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<encoding>UTF-8</encoding>
 					<additionalJOptions>
 						<additionalJOption>-Xdoclint:none</additionalJOption>
 					</additionalJOptions>
-                </configuration>
-            </plugin>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
@@ -144,7 +145,7 @@
 				<executions>
 					<execution>
 						<id>attach-sources</id>
-                        <phase>package</phase>
+						<phase>package</phase>
 						<goals>
 							<goal>jar-no-fork</goal>
 						</goals>
@@ -160,7 +161,7 @@
 				<plugins>
 					<plugin>
 						<groupId>org.sonatype.central</groupId>
-	  					<artifactId>central-publishing-maven-plugin</artifactId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
 						<version>0.4.0</version>
 						<extensions>true</extensions>
 						<configuration>
@@ -172,32 +173,32 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-compiler-plugin</artifactId>
-		 				<version>3.12.1</version>
+						<version>3.12.1</version>
 						<configuration>
 							<source>${maven.compiler.source}</source>
 							<target>${maven.compiler.target}</target>
 							<encoding>${project.build.sourceEncoding}</encoding>
 						</configuration>
 					</plugin>
-		 			<plugin>
+					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-jar-plugin</artifactId>
 						<version>3.3.0</version>
-							<configuration>
-								<archive>
-									<index>true</index>
-									<manifest>
-										<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-									</manifest>
-			    					<manifestEntries>
-										<Build-OS>${os.name}</Build-OS>
-										<Built-By>${user.name}</Built-By>
-										<Build-Jdk>${java.version}</Build-Jdk>
-										<Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
-									</manifestEntries>
-								</archive>
-							</configuration>
-					 </plugin>
+						<configuration>
+							<archive>
+								<index>true</index>
+								<manifest>
+									<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+								</manifest>
+								<manifestEntries>
+									<Build-OS>${os.name}</Build-OS>
+									<Built-By>${user.name}</Built-By>
+									<Build-Jdk>${java.version}</Build-Jdk>
+									<Build-Timestamp>${maven.build.timestamp}</Build-Timestamp>
+								</manifestEntries>
+							</archive>
+						</configuration>
+					</plugin>
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-source-plugin</artifactId>
@@ -253,5 +254,5 @@
 				</plugins>
 			</build>
 		</profile>
-	</profiles>					
+	</profiles>
 </project>

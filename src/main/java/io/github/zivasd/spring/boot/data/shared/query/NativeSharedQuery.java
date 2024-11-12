@@ -26,6 +26,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.repository.query.Parameter;
+import org.springframework.data.util.Lazy;
 import org.springframework.util.StringUtils;
 
 import io.github.zivasd.spring.boot.data.shared.repository.TableNameDecider;
@@ -36,9 +37,11 @@ import io.github.zivasd.spring.boot.data.shared.repository.config.ModuleConfigur
  * isStreamQuery isSliceQuery isModifyingQuery ... not support
  */
 public class NativeSharedQuery extends AbstractSharedQuery {
-	private static final Pattern COUNT_MATCH = compile("\\s*(select\\s+(((?s).+?)?)\\s+)(from\\s+)(.*)", CASE_INSENSITIVE | DOTALL);
+	private static final Pattern COUNT_MATCH = compile("\\s*(select\\s+(((?s).+?)?)\\s+)(from\\s+)(.*)",
+			CASE_INSENSITIVE | DOTALL);
 	private static final String TABLE_NAME_PLACEHOLDER = "$TABLE$";
 	private static final ConversionService CONVERSION_SERVICE;
+	private final Lazy<TableNameDecider> tableNameDecider;
 
 	static {
 		ConfigurableConversionService conversionService = new DefaultConversionService();
@@ -49,33 +52,44 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 
 	public NativeSharedQuery(SharedQueryMethod method, EntityManager entityManager) {
 		super(method, entityManager);
+		this.tableNameDecider = Lazy.of(() -> createTableNameDecider(method.getTableNameDecider()));
 	}
 
-	private TableNameDecider getTableNameDecider(Class<? extends TableNameDecider> clazz) {
+	private TableNameDecider createTableNameDecider(Class<? extends TableNameDecider> clazz) {
 		if (clazz == TableNameDecider.NoOperator.class) {
 			return TableNameDecider.NoOperator.INSTANCE;
 		}
 		return ModuleConfiguration.autowire(clazz);
 	}
-	
+
+	private List<String> deciderTableNames(SharedParametersParameterAccessor accessor) {
+		Map<String, Object> decideParameters = new HashMap<>();
+		for (Parameter param : accessor.getParameters()) {
+			if (param.isBindable()) {
+				String name = param.getName().orElse(Integer.toString(param.getIndex()));
+				decideParameters.put(name, accessor.getValue(param));
+			}
+		}
+		return this.tableNameDecider.get().decideNames(decideParameters);
+	}
+
 	@Override
 	protected Object doExceute(SharedParametersParameterAccessor accessor) {
-		Map<String, Object> bindableParameters = new HashMap<>();
-		for(Parameter param : accessor.getParameters().getBindableParameters()) {
-			param.getName().ifPresent(name->bindableParameters.put(name, accessor.getValue(param)));
-		}
-		
 		final SharedQueryMethod queryMethod = getQueryMethod();
-		List<String> tableNames = getTableNameDecider(queryMethod.getTableNameDecider()).decideNames(bindableParameters);
+		List<String> tableNames = deciderTableNames(accessor);
 		String queryString = deriveQuery(queryMethod, tableNames);
 		if (tableNames.isEmpty() && queryString.contains(TABLE_NAME_PLACEHOLDER)) {
 			return Collections.emptyList();
 		}
 
+		Map<String, Object> bindableParameters = new HashMap<>();
+		for (Parameter param : accessor.getParameters().getBindableParameters()) {
+			param.getName().ifPresent(name -> bindableParameters.put(name, accessor.getValue(param)));
+		}
 		final EntityManager em = getEntityManager();
-		Query query = em.createNativeQuery(queryString+" "+deriveSort(accessor.getSort()), Tuple.class);
+		Query query = em.createNativeQuery(queryString + " " + deriveSort(accessor.getSort()), Tuple.class);
 		bindableParameters.forEach(query::setParameter);
-		
+
 		if (queryMethod.isPageQuery()) {
 			Pageable pageable = accessor.getPageable();
 			if (!pageable.isUnpaged()) {
@@ -87,34 +101,36 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 			Object countObject = countQuery.getSingleResult();
 			Long count = CONVERSION_SERVICE.convert(countObject, Long.class);
 			List<?> listResult = query.getResultList();
-			return new PageImpl<>(listResult, accessor.getPageable(), count==null?0:count);
-		} else if (queryMethod.isCollectionQuery()){
+			return new PageImpl<>(listResult, accessor.getPageable(), count == null ? 0 : count);
+		} else if (queryMethod.isCollectionQuery()) {
 			return query.getResultList();
 		} else {
 			List<?> resultList = query.getResultList();
-			return resultList.isEmpty()?null:resultList.get(0);
+			return resultList.isEmpty() ? null : resultList.get(0);
 		}
 	}
-	
+
 	private String deriveSort(Sort sort) {
-		if(sort.isUnsorted())
+		if (sort.isUnsorted())
 			return "";
-		
-		return sort.stream().map(order->String.format("ORDER BY %s %s", order.getProperty(), getDirectionString(order.getDirection())))
-			.reduce((result, element)-> result + " , " + element).orElse("");
+
+		return sort.stream().map(
+				order -> String.format("ORDER BY %s %s", order.getProperty(), getDirectionString(order.getDirection())))
+				.reduce((result, element) -> result + " , " + element).orElse("");
 	}
-	
+
 	private String getDirectionString(Direction direction) {
-		return direction.equals(Direction.ASC)?"ASC":"DESC";
+		return direction.equals(Direction.ASC) ? "ASC" : "DESC";
 	}
-	
+
 	private String deriveCountQuery(SharedQueryMethod queryMethod, List<String> tableNames) {
 		String singleQuery = deriveCountQuery(queryMethod);
-		String query = tableNames.isEmpty() ? singleQuery : tableNames.stream().map(e -> singleQuery.replace("$TABLE$", e))
-				.reduce((result, element) -> result + " UNION ALL " + element).orElse(null);
+		String query = tableNames.isEmpty() ? singleQuery
+				: tableNames.stream().map(e -> singleQuery.replace(TABLE_NAME_PLACEHOLDER, e))
+						.reduce((result, element) -> result + " UNION ALL " + element).orElse(null);
 		return String.format("SELECT sum(scount) FROM (%s)", query);
 	}
-	
+
 	private String deriveCountQuery(SharedQueryMethod queryMethod) {
 		String queryString = queryMethod.getAnnotatedCountQuery();
 		if (queryString != null) {
@@ -127,13 +143,14 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 		}
 		return queryString;
 	}
-	
+
 	private String deriveQuery(SharedQueryMethod queryMethod, List<String> tableNames) {
 		String queryString = queryMethod.getAnnotatedQuery();
 		if (!StringUtils.hasText(queryString)) {
 			throw new InvalidDataAccessApiUsageException("The annotation SharedQuery must set query value.");
 		}
-		return tableNames.isEmpty() ? queryString : tableNames.stream().map(e -> queryString.replace(TABLE_NAME_PLACEHOLDER, e))
-				.reduce((result, element) -> result + " UNION ALL " + element).orElse(null);
+		return tableNames.isEmpty() ? queryString
+				: tableNames.stream().map(e -> queryString.replace(TABLE_NAME_PLACEHOLDER, e))
+						.reduce((result, element) -> result + " UNION ALL " + element).orElse(null);
 	}
 }

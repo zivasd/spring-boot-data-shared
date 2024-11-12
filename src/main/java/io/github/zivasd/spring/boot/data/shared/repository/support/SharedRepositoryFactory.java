@@ -3,7 +3,6 @@ package io.github.zivasd.spring.boot.data.shared.repository.support;
 import java.util.Optional;
 
 import javax.persistence.EntityManager;
-import javax.validation.constraints.NotNull;
 
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.RepositoryInformation;
@@ -20,7 +19,7 @@ import io.github.zivasd.spring.boot.data.shared.query.SharedQueryLookupStrategy;
 
 public class SharedRepositoryFactory extends RepositoryFactorySupport {
 	private final EntityManager entityManager;
-	
+
 	public SharedRepositoryFactory(EntityManager entityManager) {
 		Assert.notNull(entityManager, "EntityManager must not be null!");
 		this.entityManager = entityManager;
@@ -40,7 +39,7 @@ public class SharedRepositoryFactory extends RepositoryFactorySupport {
 	protected Class<?> getRepositoryBaseClass(RepositoryMetadata metadata) {
 		return SimpleSharedRepository.class;
 	}
-	
+
 	@Override
 	@NonNull
 	protected Optional<QueryLookupStrategy> getQueryLookupStrategy(@Nullable Key key,

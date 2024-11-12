@@ -13,7 +13,7 @@ Maven pom.xml
 ```
  <groupId>io.github.zivasd</groupId>
  <artifactId>spring-boot-data-shared</artifactId>
- <version>1.0.0</version>
+ <version>1.0.3</version>
 ```
 
 In your spring boot project

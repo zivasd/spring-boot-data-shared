@@ -32,6 +32,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.data.repository.query.ReturnedType;
+import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -41,13 +42,14 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 
 	protected AbstractSharedQuery(SharedQueryMethod queryMethod, EntityManager entityManager) {
 		Assert.notNull(queryMethod, "Query method must not be null!");
-		Assert.notNull(entityManager, "EntityManager must not be null!");		
+		Assert.notNull(entityManager, "EntityManager must not be null!");
 		this.queryMethod = queryMethod;
 		this.entityManager = entityManager;
 	}
 
 	@Override
-	public Object execute(Object[] parameters) {
+	@Nullable
+	public Object execute(@NonNull Object[] parameters) {
 		SharedParametersParameterAccessor accessor = new SharedParametersParameterAccessor(queryMethod.getParameters(),
 				parameters);
 		Object result = doExceute(accessor);
@@ -64,19 +66,20 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 	}
 
 	@Override
+	@NonNull
 	public SharedQueryMethod getQueryMethod() {
 		return queryMethod;
 	}
-	
+
 	protected EntityManager getEntityManager() {
 		return entityManager;
 	}
 
 	protected abstract Object doExceute(SharedParametersParameterAccessor accessor);
-	
+
 	static class BeanPropertyTupleConverter implements Converter<Object, Object> {
 		protected final Log logger = LogFactory.getLog(getClass());
-		
+
 		@Nullable
 		private Class<?> mappedClass;
 
@@ -88,40 +91,39 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 
 		@Nullable
 		private Set<String> mappedPropertyNames;
-		
+
 		public BeanPropertyTupleConverter() {
 		}
-		
+
 		public BeanPropertyTupleConverter(Class<?> mappedClass) {
 			initialize(mappedClass);
 		}
-		
+
 		public void setMappedClass(Class<?> mappedClass) {
 			if (this.mappedClass == null) {
 				initialize(mappedClass);
-			}
-			else {
+			} else {
 				if (this.mappedClass != mappedClass) {
 					throw new InvalidDataAccessApiUsageException("The mapped class can not be reassigned to map to " +
 							mappedClass + " since it is already providing mapping for " + this.mappedClass);
 				}
 			}
 		}
-		
+
 		@Nullable
 		public final Class<?> getMappedClass() {
 			return this.mappedClass;
 		}
-		
+
 		public void setConversionService(@Nullable ConversionService conversionService) {
 			this.conversionService = conversionService;
 		}
-		
+
 		@Nullable
 		public ConversionService getConversionService() {
 			return this.conversionService;
 		}
-		
+
 		protected void initialize(Class<?> mappedClass) {
 			this.mappedClass = mappedClass;
 			this.mappedProperties = new HashMap<>();
@@ -129,18 +131,19 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 
 			for (PropertyDescriptor pd : BeanUtils.getPropertyDescriptors(mappedClass)) {
 				if (pd.getWriteMethod() != null) {
+					this.mappedProperties.put(pd.getName(), pd);
 					this.mappedPropertyNames.add(pd.getName());
 				}
 			}
 		}
-		
+
 		@Override
-		public Object convert(Object source) {
+		public Object convert(@NonNull Object source) {
 			if (!(source instanceof Tuple)) {
 				return source;
 			}
-			Tuple tuple = (Tuple) source;		
-			
+			Tuple tuple = (Tuple) source;
+
 			BeanWrapperImpl bw = new BeanWrapperImpl();
 			initBeanWrapper(bw);
 
@@ -153,7 +156,6 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 				PropertyDescriptor pd = (this.mappedProperties != null ? this.mappedProperties.get(property) : null);
 				if (pd != null) {
 					try {
-						tuple.get(index);
 						Object value = tuple.get(index);
 						bw.setPropertyValue(pd.getName(), value);
 					} catch (NotWritablePropertyException ex) {
@@ -164,12 +166,14 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 			}
 			return mappedObject;
 		}
-		
+
 		protected Object constructMappedInstance(Tuple tuple, TypeConverter tc) {
+			Assert.notNull(tuple, "Tuple must not null");
+			Assert.notNull(tc, "TypeConverter must not null");
 			Assert.state(this.mappedClass != null, "Mapped class was not specified");
 			return BeanUtils.instantiateClass(this.mappedClass);
 		}
-		
+
 		protected void initBeanWrapper(BeanWrapper bw) {
 			ConversionService cs = getConversionService();
 			if (cs != null) {
@@ -180,7 +184,7 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 		public static BeanPropertyTupleConverter newInstance(Class<?> mappedClass) {
 			return new BeanPropertyTupleConverter(mappedClass);
 		}
-		
+
 		public static BeanPropertyTupleConverter newInstance(
 				Class<?> mappedClass, @Nullable ConversionService conversionService) {
 			BeanPropertyTupleConverter tupleMapper = newInstance(mappedClass);
@@ -188,7 +192,7 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 			return tupleMapper;
 		}
 	}
-	
+
 	static class DataClassTupleConverter extends BeanPropertyTupleConverter {
 		@Nullable
 		private Constructor<?> mappedConstructor;
@@ -199,14 +203,13 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 		@Nullable
 		private TypeDescriptor[] constructorParameterTypes;
 
-		
 		public DataClassTupleConverter() {
 		}
 
 		public DataClassTupleConverter(Class<?> mappedClass) {
 			super(mappedClass);
 		}
-		
+
 		@Override
 		protected void initialize(Class<?> mappedClass) {
 			super.initialize(mappedClass);
@@ -217,7 +220,8 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 				this.constructorParameterNames = BeanUtils.getParameterNames(this.mappedConstructor);
 				this.constructorParameterTypes = new TypeDescriptor[paramCount];
 				for (int i = 0; i < paramCount; i++) {
-					this.constructorParameterTypes[i] = new TypeDescriptor(new MethodParameter(this.mappedConstructor, i));
+					this.constructorParameterTypes[i] = new TypeDescriptor(
+							new MethodParameter(this.mappedConstructor, i));
 				}
 			}
 		}
@@ -234,8 +238,7 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 					TypeDescriptor td = this.constructorParameterTypes[i];
 					args[i] = tc.convertIfNecessary(value, td.getType(), td);
 				}
-			}
-			else {
+			} else {
 				args = new Object[0];
 			}
 			return BeanUtils.instantiateClass(this.mappedConstructor, args);
@@ -252,13 +255,15 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 			return rowMapper;
 		}
 	}
-	
+
 	static class TupleConverter implements Converter<Object, Object> {
 		private final ReturnedType type;
+
 		public TupleConverter(ReturnedType type) {
 			Assert.notNull(type, "Returned type must not be null!");
 			this.type = type;
 		}
+
 		@Override
 		public Object convert(Object source) {
 			if (!(source instanceof Tuple)) {
@@ -278,17 +283,21 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 		private static class TupleBackedMap implements Map<String, Object> {
 			private static final String UNMODIFIABLE_MESSAGE = "A TupleBackedMap cannot be modified.";
 			private final Tuple tuple;
+
 			TupleBackedMap(Tuple tuple) {
 				this.tuple = tuple;
 			}
+
 			@Override
 			public int size() {
 				return tuple.getElements().size();
 			}
+
 			@Override
 			public boolean isEmpty() {
 				return tuple.getElements().isEmpty();
 			}
+
 			@Override
 			public boolean containsKey(Object key) {
 				try {
@@ -303,7 +312,7 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 			public boolean containsValue(Object value) {
 				return Arrays.asList(tuple.toArray()).contains(value);
 			}
-			
+
 			@Override
 			@Nullable
 			public Object get(Object key) {
@@ -351,12 +360,10 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 
 			@Override
 			public Set<Entry<String, Object>> entrySet() {
-
 				return tuple.getElements().stream() //
 						.map(e -> new HashMap.SimpleEntry<String, Object>(e.getAlias(), tuple.get(e))) //
 						.collect(Collectors.toSet());
 			}
 		}
 	}
-	
 }
