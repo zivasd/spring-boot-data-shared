@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import javax.persistence.EntityManager;
 
+import org.springframework.data.jpa.repository.query.EscapeCharacter;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.RepositoryInformation;
 import org.springframework.data.repository.core.RepositoryMetadata;
@@ -19,12 +20,21 @@ import io.github.zivasd.spring.boot.data.shared.query.SharedQueryLookupStrategy;
 
 public class SharedRepositoryFactory extends RepositoryFactorySupport {
 	private final EntityManager entityManager;
+	private EscapeCharacter escapeCharacter = EscapeCharacter.DEFAULT;
 
 	public SharedRepositoryFactory(EntityManager entityManager) {
 		Assert.notNull(entityManager, "EntityManager must not be null!");
 		this.entityManager = entityManager;
 	}
 
+	public void setEscapeCharacter(EscapeCharacter escapeCharacter) {
+		this.escapeCharacter = escapeCharacter;
+	}
+
+	/**
+	 * extends JpaMetamodelEntityInformation and JpaPersistableEntityInformation
+	 * 
+	 */
 	@Override
 	public <T, I> EntityInformation<T, I> getEntityInformation(Class<T> domainClass) {
 		return null;
@@ -44,6 +54,7 @@ public class SharedRepositoryFactory extends RepositoryFactorySupport {
 	@NonNull
 	protected Optional<QueryLookupStrategy> getQueryLookupStrategy(@Nullable Key key,
 			@NonNull QueryMethodEvaluationContextProvider evaluationContextProvider) {
-		return Optional.of(SharedQueryLookupStrategy.create(entityManager, key, evaluationContextProvider));
+		return Optional
+				.of(SharedQueryLookupStrategy.create(entityManager, key, evaluationContextProvider, escapeCharacter));
 	}
 }

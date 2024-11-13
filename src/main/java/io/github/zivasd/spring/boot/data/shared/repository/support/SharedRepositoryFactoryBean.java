@@ -3,48 +3,50 @@ package io.github.zivasd.spring.boot.data.shared.repository.support;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 
-import org.springframework.data.repository.core.support.RepositoryFactoryBeanSupport;
+import org.springframework.data.jpa.repository.query.EscapeCharacter;
+import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.repository.core.support.RepositoryFactorySupport;
-import org.springframework.lang.NonNull;
+import org.springframework.data.repository.core.support.TransactionalRepositoryFactoryBeanSupport;
 import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 import io.github.zivasd.spring.boot.data.shared.repository.SharedRepository;
 
-public class SharedRepositoryFactoryBean<T extends SharedRepository> extends RepositoryFactoryBeanSupport<T, Void, Void> {
-	private static final String DEFAULT_TRANSACTION_MANAGER_BEAN_NAME = "transactionManager";
-	
+public class SharedRepositoryFactoryBean<T extends SharedRepository>
+		extends TransactionalRepositoryFactoryBeanSupport<T, Void, Void> {
+
 	private @Nullable EntityManager entityManager;
-	private String transactionManagerName = DEFAULT_TRANSACTION_MANAGER_BEAN_NAME;
-	private boolean enableDefaultTransactions = false;
+	private EscapeCharacter escapeCharacter = EscapeCharacter.DEFAULT;
 
 	protected SharedRepositoryFactoryBean(Class<? extends T> repositoryInterface) {
 		super(repositoryInterface);
 	}
 
 	@Override
-	@NonNull
-	protected RepositoryFactorySupport createRepositoryFactory() {
-		return new SharedRepositoryFactory(entityManager);
+	protected RepositoryFactorySupport doCreateRepositoryFactory() {
+		Assert.state(entityManager != null, "EntityManager must not be null!");
+		SharedRepositoryFactory sharedRepositoryFactory = new SharedRepositoryFactory(entityManager);
+		sharedRepositoryFactory.setEscapeCharacter(this.escapeCharacter);
+		return sharedRepositoryFactory;
 	}
 
 	@PersistenceContext
 	public void setEntityManager(EntityManager entityManager) {
 		this.entityManager = entityManager;
 	}
-	
-	public void setTransactionManager(String transactionManager) {
-		this.transactionManagerName = transactionManager == null ? DEFAULT_TRANSACTION_MANAGER_BEAN_NAME : transactionManager;
+
+	@Override
+	public void setMappingContext(MappingContext<?, ?> mappingContext) {
+		super.setMappingContext(mappingContext);
 	}
-	
-	public void setEnableDefaultTransactions(boolean enableDefaultTransactions) {
-		this.enableDefaultTransactions = enableDefaultTransactions;
+
+	@Override
+	public void afterPropertiesSet() {
+		Assert.state(entityManager != null, "EntityManager must not be null!");
+		super.afterPropertiesSet();
 	}
-	
-	protected String getTransactionManagerName() {
-		return transactionManagerName;
-	}
-	
-	protected boolean isDefaultTransactionManager() {
-		return enableDefaultTransactions;
+
+	public void setEscapeCharacter(char escapeCharacter) {
+		this.escapeCharacter = EscapeCharacter.of(escapeCharacter);
 	}
 }

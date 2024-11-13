@@ -9,11 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SimpleSharedRepository implements SharedRepositoryImplementation {
 	private final EntityManager entityManager;
-	
+
 	public SimpleSharedRepository(EntityManager entityManager) {
 		this.entityManager = entityManager;
 	}
-	
+
 	protected EntityManager getEntityManager() {
 		return entityManager;
 	}

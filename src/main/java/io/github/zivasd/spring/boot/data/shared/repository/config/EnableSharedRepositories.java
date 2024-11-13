@@ -45,5 +45,7 @@ public @interface EnableSharedRepositories {
 
 	String transactionManagerRef() default "transactionManager";
 
-	boolean enableDefaultTransactions() default false;
+	boolean enableDefaultTransactions() default true;
+
+	char escapeCharacter() default '\\';
 }
