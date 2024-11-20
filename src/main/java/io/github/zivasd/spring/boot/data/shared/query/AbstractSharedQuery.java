@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
@@ -22,6 +23,7 @@ import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
 import org.springframework.beans.NotWritablePropertyException;
 import org.springframework.beans.TypeConverter;
+import org.springframework.core.CollectionFactory;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
@@ -29,12 +31,14 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.dao.DataRetrievalFailureException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.data.repository.query.ReturnedType;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
 
 public abstract class AbstractSharedQuery implements RepositoryQuery {
 	private final SharedQueryMethod queryMethod;
@@ -58,6 +62,9 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 			ResultProcessor withDynamicProjection = queryMethod.getResultProcessor().withDynamicProjection(accessor);
 			return withDynamicProjection.processResult(result,
 					new TupleConverter(withDynamicProjection.getReturnedType()));
+		} else if (ClassUtils.isPrimitiveOrWrapper(returnType.getReturnedType())
+				|| returnType.getReturnedType() == String.class) {
+			return new SimpleTupleResultProcessor(returnType, getQueryMethod()).processResult(result);
 		} else {
 			DataClassTupleConverter dataClassTupleConverter = DataClassTupleConverter
 					.newInstance(returnType.getReturnedType());
@@ -76,6 +83,56 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 	}
 
 	protected abstract Object doExceute(SharedParametersParameterAccessor accessor);
+
+	static class SimpleTupleResultProcessor {
+		private final ReturnedType type;
+		private final QueryMethod method;
+		private final Converter<Object, Object> converter = SimpleTypeTupleConverter.INSTANCE;
+
+		SimpleTupleResultProcessor(ReturnedType type, QueryMethod method) {
+			this.type = type;
+			this.method = method;
+		}
+
+		@Nullable
+		@SuppressWarnings("unchecked")
+		public <T> T processResult(@Nullable Object source) {
+			if (source == null || type.isInstance(source)) {
+				return (T) source;
+			}
+
+			if (source instanceof Collection && method.isCollectionQuery()) {
+				Collection<?> collection = (Collection<?>) source;
+				Collection<Object> target = createCollectionFor(collection);
+				for (Object columns : collection) {
+					target.add(type.isInstance(columns) ? columns : converter.convert(columns));
+				}
+				return (T) target;
+			}
+			return (T) converter.convert(source);
+		}
+
+		private static Collection<Object> createCollectionFor(Collection<?> source) {
+			try {
+				return CollectionFactory.createCollection(source.getClass(), source.size());
+			} catch (RuntimeException o_O) {
+				return CollectionFactory.createApproximateCollection(source, source.size());
+			}
+		}
+	}
+
+	static class SimpleTypeTupleConverter implements Converter<Object, Object> {
+		static SimpleTypeTupleConverter INSTANCE = new SimpleTypeTupleConverter();
+
+		@Override
+		public Object convert(Object source) {
+			if (!(source instanceof Tuple)) {
+				return source;
+			}
+			Tuple tuple = (Tuple) source;
+			return tuple.get(0);
+		}
+	}
 
 	static class BeanPropertyTupleConverter implements Converter<Object, Object> {
 		protected final Log logger = LogFactory.getLog(getClass());

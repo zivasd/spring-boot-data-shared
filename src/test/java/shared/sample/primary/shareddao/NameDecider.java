@@ -12,7 +12,7 @@ public class NameDecider implements TableNameDecider {
 
     @Override
     public List<String> decideNames(Map<String, Object> paramMap) {
-        int type = (int) paramMap.get("0");
+        int type = (int) paramMap.get("type");
         if (type == 1)
             return Collections.singletonList("person_1");
         else if (type == 2)

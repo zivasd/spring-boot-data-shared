@@ -4,9 +4,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@FunctionalInterface
 public interface TableNameDecider {
 	List<String> decideNames(Map<String, Object> paramMap);
-	
+
 	public static class NoOperator implements TableNameDecider {
 		public static final TableNameDecider INSTANCE = new NoOperator();
 

@@ -64,13 +64,15 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 
 	private List<String> deciderTableNames(SharedParametersParameterAccessor accessor) {
 		Map<String, Object> decideParameters = new HashMap<>();
-		for (Parameter param : accessor.getParameters()) {
-			if (param.isBindable()) {
-				String name = param.getName().orElse(Integer.toString(param.getIndex()));
-				decideParameters.put(name, accessor.getValue(param));
-			}
+		for (Parameter param : accessor.getParameters().getDeciderParamParameter()) {
+			String name = param.getName().orElse(Integer.toString(param.getIndex()));
+			decideParameters.put(name, accessor.getValue(param));
 		}
-		return this.tableNameDecider.get().decideNames(decideParameters);
+		TableNameDecider paramDecider = accessor.getTableNameDecider();
+		if (paramDecider instanceof TableNameDecider.NoOperator)
+			return this.tableNameDecider.get().decideNames(decideParameters);
+		else
+			return paramDecider.decideNames(decideParameters);
 	}
 
 	@Override
@@ -105,8 +107,7 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 		} else if (queryMethod.isCollectionQuery()) {
 			return query.getResultList();
 		} else {
-			List<?> resultList = query.getResultList();
-			return resultList.isEmpty() ? null : resultList.get(0);
+			return query.getSingleResult();
 		}
 	}
 

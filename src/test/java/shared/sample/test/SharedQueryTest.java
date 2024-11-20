@@ -18,6 +18,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcOperations;
 
 import shared.sample.primary.dto.IPerson;
+import shared.sample.primary.shareddao.NameDecider;
 import shared.sample.primary.shareddao.SampleSharedRepository;
 import shared.sample.secondary.shareddao.SampleSharedRepository2;
 
@@ -57,14 +58,20 @@ class SharedQueryTest {
         List<IPerson> persons = shared.findPersonProjection(1, page);
         assertEquals("bob", persons.get(0).getName());
 
-        persons = shared.findPersonProjection(2, null);
+        persons = shared.findPersonProjection(2, (Pageable) null);
         assertEquals("tom", persons.get(0).getName());
 
-        persons = shared.findPersonProjection(3, null);
+        persons = shared.findPersonProjection(3, (Pageable) null);
         assertEquals(2, persons.size());
         List<String> names = persons.stream().map(IPerson::getName).collect(Collectors.toList());
         assertTrue(names.contains("bob"));
         assertTrue(names.contains("tom"));
+    }
+
+    @Test
+    void projectionListTest1() {
+        Long count = shared.findPersonProjection(1, new NameDecider());
+        assertEquals(1, count);
     }
 
     @Test
