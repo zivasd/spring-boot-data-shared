@@ -50,7 +50,7 @@ public class SharedParameters extends Parameters<SharedParameters, SharedParamet
     public SharedParameters getDeciderParamParameter() {
         List<SharedParameter> deciderParams = new ArrayList<>();
         for (SharedParameter candidate : this) {
-            if (candidate.isDeciderParam()) {
+            if (candidate.isDeciderParamParameter()) {
                 deciderParams.add(candidate);
             }
         }
@@ -90,18 +90,12 @@ public class SharedParameters extends Parameters<SharedParameters, SharedParamet
             return isTableNameDecider;
         }
 
-        private boolean isTableNameDeciderType(Class<?> parameterType) {
-            for (Class<?> specialParameterType : TYPES) {
-                if (specialParameterType.isAssignableFrom(parameterType)) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         @Override
         public boolean isSpecialParameter() {
-            return super.isSpecialParameter() || !isDeciderParamBindable() || isTableNameDeciderParameter();
+            if( isDeciderParamParameter() ) {
+                return !isDeciderParamBindable();
+            }
+            return super.isSpecialParameter() || isTableNameDeciderParameter();
         }
 
         @Override
@@ -111,27 +105,30 @@ public class SharedParameters extends Parameters<SharedParameters, SharedParamet
 
         @Override
         public Optional<String> getName() {
-            Optional<String> n = super.getName();
-            return n.isPresent() ? n : name;
+           return name.isPresent()?name:super.getName();
         }
 
-        @Override
-        public boolean isBindable() {
-            return super.isBindable() && isDeciderParamBindable();
-        }
-
-        public boolean isDeciderParam() {
+        public boolean isDeciderParamParameter() {
             return this.deciderParamAnnotation != null;
         }
 
+        private boolean isTableNameDeciderType(Class<?> parameterType) {
+            for (Class<?> specialParameterType : TYPES) {
+                if (specialParameterType.isAssignableFrom(parameterType)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private Optional<String> getDeciderParamName() {
-            if (!isDeciderParam() || !StringUtils.hasText(this.deciderParamAnnotation.value()))
+            if (!isDeciderParamParameter() || !StringUtils.hasText(this.deciderParamAnnotation.value()))
                 return Optional.empty();
             return Optional.of(this.deciderParamAnnotation.value());
         }
 
         private boolean isDeciderParamBindable() {
-            return isDeciderParam() && this.deciderParamAnnotation.bindable();
+            return isDeciderParamParameter() && this.deciderParamAnnotation.bindable();
         }
     }
 }

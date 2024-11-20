@@ -1,6 +1,12 @@
 # Changelog
 
 -------------------------------------------------------------------------------------------------------------
+
+## 1.0.5(2024-11.20)
+
+* 修复param bindable bug.
+* change default DeciderParam.bindable to true
+
 ## 1.0.4(2024-11-20)
 
 * Add @DeciderParam标注，明确定义是否参与表名决策, DeciderParam.bindable指示是否同时做为查询参数

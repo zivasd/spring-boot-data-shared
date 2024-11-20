@@ -3,6 +3,7 @@ package shared.sample.primary.shareddao;
 import java.util.List;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.validation.annotation.Validated;
 
@@ -16,8 +17,18 @@ import shared.sample.primary.dto.IPerson;
 @Validated
 public interface SampleSharedRepository extends SharedRepository {
     @SharedQuery(value = "select name from $TABLE$", tableNameDecider = NameDecider.class)
-    List<IPerson> findPersonProjection(@DeciderParam("type") int type, Pageable pageable);
+    List<IPerson> findPersonProjection(@DeciderParam(value = "type", bindable = false) int type, Pageable pageable);
 
     @SharedQuery(value = "select count(*) as c from $TABLE$")
-    Long findPersonProjection(@DeciderParam("type") int type, TableNameDecider decider);
+    Long findPersonProjection(@DeciderParam(value = "type", bindable = false) int type, TableNameDecider decider);
+
+    @SharedQuery(value = "select id as id from $TABLE$")
+    List<Long> findPersonIds();
+
+    @SharedQuery(value = "select id as id from $TABLE$ where id=:id")
+    List<Long> findPersonIdsWithCondition(@Param("id") long id, @DeciderParam(bindable = false) int type, TableNameDecider decider);
+
+    @SharedQuery(value = "select id as id from $TABLE$ where id=:id")
+    List<Long> findPersonIdsWithBindable(@DeciderParam("id") long type, TableNameDecider decider);
+
 }

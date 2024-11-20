@@ -12,5 +12,5 @@ import java.lang.annotation.Target;
 public @interface DeciderParam {
     String value() default "";
 
-    boolean bindable() default false;
+    boolean bindable() default true;
 }
