@@ -92,6 +92,10 @@ public class NativeSharedQuery extends AbstractSharedQuery {
 		Query query = em.createNativeQuery(queryString + " " + deriveSort(accessor.getSort()), Tuple.class);
 		bindableParameters.forEach(query::setParameter);
 
+		if (queryMethod.isModifyingQuery()) {
+			return query.executeUpdate();
+		}
+
 		if (queryMethod.isPageQuery()) {
 			Pageable pageable = accessor.getPageable();
 			if (!pageable.isUnpaged()) {

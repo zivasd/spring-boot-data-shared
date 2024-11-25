@@ -1,8 +1,8 @@
 package shared.sample.test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,19 +14,17 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.transaction.annotation.Transactional;
 
 import shared.sample.primary.dto.IPerson;
-import shared.sample.primary.shareddao.NameDecider;
 import shared.sample.primary.shareddao.SampleSharedRepository;
 import shared.sample.secondary.shareddao.SampleSharedRepository2;
 
 @SpringBootTest
 @TestInstance(Lifecycle.PER_CLASS)
-class SharedQueryTest {
-
+class SharedInsertTest {
     @Autowired
     @Qualifier("primaryJdbcTemplate")
     private JdbcOperations primaryOperations;
@@ -63,30 +61,15 @@ class SharedQueryTest {
     }
 
     @Test
-    void projectionListTest() {
-        Pageable page = PageRequest.of(0, 10);
-        List<IPerson> persons = shared.findPersonProjection(1, page);
-        assertEquals("bob", persons.get(0).getName());
+    @Transactional
+    void insertPersonTest() {
+        shared.savePerson(10, "ziva", properties -> {
+            return Collections.singletonList("person_2");
+        });
 
-        persons = shared.findPersonProjection(2, (Pageable) null);
-        assertEquals("tom", persons.get(0).getName());
-
-        persons = shared.findPersonProjection(3, (Pageable) null);
-        assertEquals(2, persons.size());
+        List<IPerson> persons = shared.findPersonProjection(3, (Pageable) null);
         List<String> names = persons.stream().map(IPerson::getName).collect(Collectors.toList());
-        assertTrue(names.contains("bob"));
-        assertTrue(names.contains("tom"));
-    }
+        assertTrue(names.contains("ziva"));
 
-    @Test
-    void projectionListTest1() {
-        Long count = shared.findPersonProjection(1, new NameDecider());
-        assertEquals(1, count);
-    }
-
-    @Test
-    void projectionListTest2() {
-        List<IPerson> persons = shared2.findUserProjection();
-        assertEquals("李明", persons.get(0).getName());
     }
 }

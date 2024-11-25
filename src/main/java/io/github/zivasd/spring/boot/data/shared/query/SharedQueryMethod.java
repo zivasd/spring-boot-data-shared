@@ -5,9 +5,11 @@ import java.lang.reflect.Method;
 
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.query.Parameter;
+import org.springframework.data.repository.query.Parameters;
 import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.util.QueryExecutionConverters;
 import org.springframework.data.util.Lazy;
@@ -25,6 +27,7 @@ public class SharedQueryMethod extends QueryMethod {
 
 	private final Lazy<SharedQuery> sharedQuery;
 	private final Lazy<Boolean> isNativeQuery;
+	private final Lazy<Modifying> modifying;
 	private final Lazy<Class<? extends TableNameDecider>> tableNameDecider;
 
 	protected SharedQueryMethod(Method method, RepositoryMetadata metadata, ProjectionFactory factory) {
@@ -36,8 +39,13 @@ public class SharedQueryMethod extends QueryMethod {
 		this.returnType = potentiallyUnwrapReturnTypeFor(metadata, method);
 
 		this.sharedQuery = Lazy.of(() -> AnnotatedElementUtils.findMergedAnnotation(method, SharedQuery.class));
+		this.modifying = Lazy.of(() -> AnnotatedElementUtils.findMergedAnnotation(method, Modifying.class));
 		this.isNativeQuery = Lazy.of(() -> getAnnotationValue("nativeQuery", Boolean.class));
 		this.tableNameDecider = Lazy.of(() -> sharedQuery.get().tableNameDecider());
+
+		Assert.isTrue(
+				!(isModifyingQuery() && (getParameters().hasPageableParameter() || getParameters().hasSortParameter())),
+				String.format("Modifying method must not contain %s!", Parameters.TYPES));
 
 		assertParameterNamesInAnnotatedQuery();
 	}
@@ -70,6 +78,19 @@ public class SharedQueryMethod extends QueryMethod {
 	@Override
 	public SharedParameters getParameters() {
 		return (SharedParameters) super.getParameters();
+	}
+
+	@Override
+	public boolean isModifyingQuery() {
+		return modifying.getNullable() != null;
+	}
+
+	boolean getFlushAutomatically() {
+		return getMergedOrDefaultAnnotationValue("flushAutomatically", Modifying.class, Boolean.class);
+	}
+
+	boolean getClearAutomatically() {
+		return getMergedOrDefaultAnnotationValue("clearAutomatically", Modifying.class, Boolean.class);
 	}
 
 	SharedQuery getSharedQuery() {

@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Tuple;
@@ -115,14 +114,14 @@ public abstract class AbstractSharedQuery implements RepositoryQuery {
 		private static Collection<Object> createCollectionFor(Collection<?> source) {
 			try {
 				return CollectionFactory.createCollection(source.getClass(), source.size());
-			} catch (RuntimeException o_O) {
+			} catch (RuntimeException e) {
 				return CollectionFactory.createApproximateCollection(source, source.size());
 			}
 		}
 	}
 
 	static class SimpleTypeTupleConverter implements Converter<Object, Object> {
-		static SimpleTypeTupleConverter INSTANCE = new SimpleTypeTupleConverter();
+		static final SimpleTypeTupleConverter INSTANCE = new SimpleTypeTupleConverter();
 
 		@Override
 		public Object convert(Object source) {
